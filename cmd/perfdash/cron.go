@@ -20,8 +20,10 @@ them) force the data to be organized along many dimensions.
 
 Therefore, perfdash explicitly records for each sample its position
 in an arbitrary number of user-defined dimensions.
-The various dimensions
-may or may not be orthogonal: for example, a "datacenter" dimension
+Dimensions are named with simple text labels
+such as "userid" or "hostname".
+The various dimensions may or may not be orthogonal:
+for example, a "datacenter" dimension
 might be determined entirely by a "server" dimension, or
 a "procid" dimension might be independent of a "userid" dimension.
 Perfdash doesn't care whether dimensions are orthogonal,
@@ -37,8 +39,8 @@ dimensions for this value" -- such a quesion is tractable only within
 the context of a metric, where the answer is the list of dimensions
 that have appeared in recorded samples. Across multiple metrics,
 the question is nonsense -- the answer would be the universe of
-all concievable dimensions for all conceivable metrics. Also,
-dimensions are named with simple text labels. The same label might
+all concievable dimensions for all conceivable metrics.
+Also, the same label might
 mean different things in different metrics, but within a single
 metric it is expected always to mean the same thing -- to refer
 to the same conceptual dimension.)
@@ -51,14 +53,14 @@ new dimentions for a metric after measurement has begun.
 TODO(kr): this might be unnecessarily conservative; see if we can
 relax this restriction/assumption.)
 
-Values are _sampled_ on some fixed period (e.g. 1 minute).
+Values are sampled on some fixed period (e.g. 1 minute).
 The individual samples are then aggregated into buckets of a fixed size,
 and buckets are further aggregated into other buckets of some
 larger fixed size. Each bucket size is an integer multiple of
-the next-largest size. Each granularity is subject to a
-retention policy, for example: raw samples are stored for
-one hour, one-hour buckets are stored for one week, and one-day
-buckets are stored for one year.
+the closest smaller size. Each granularity is subject to a
+retention policy, for example: raw samples can be stored for
+one hour, one-hour buckets can be stored for one week, and one-day
+buckets can be stored for one year.
 Note that what perfdash considers an individual sample may already
 be an aggregate value collected and aggregated by some other
 process.
@@ -80,11 +82,6 @@ Dimensions are represented in perfdash as strings;
 they are the keys in key-value labels on stored records.
 Example dimensions might be "proc", "dc", "app", etc.
 
-Position: A set of dimensions along with their values.
-For example: "proc=abc123", or "app=cored dc=sjc".
-A record's position is all its dimension labels and values
-put together.
-
 Graph: a 2D visual representation of data stored in perfdash.
 
 Metric: records are organized into directions along many
@@ -93,27 +90,33 @@ A metric is identified by a string, its name.
 
 Plot: (see Graph)
 
+Position: A set of dimensions along with their values.
+For example: "proc=abc123", or "app=cored dc=sjc".
+A record's position is all its dimension labels and values
+put together.
+
 Values
 
 We provide three types:
 
-  gauge      float64 (with weight uint64)
+  gauge      float64 (with sample count uint64)
   counter    uint64
-  histogram  HDR-histogram
+  histogram  HDR histogram
 
-A gauge records weighted samples of a time-varying scalar value.
+A gauge records weighted samples of a time-varying scalar.
 Its values are assumed to be locally normally distributed.
 (That is, on any single position, inside a sufficiently
 small time window, the values are normally distributed.)
-For individual samples, the weight is often 1; weights are
-summed during aggregation.
+Sample counts are summed during aggregation and used as
+weights when computing the arithmetic mean.
 Examples: connection count, heap size, sensor temperature.
 Its default aggregate function is weighted arithmetic mean.
 
 A counter records samples of an integral value that is
 expected to form a monotone function on each position.
 Counters can be sampled as absolute counter value or as
-deltas. Internally they are stored as deltas.
+deltas. Internally they are stored as deltas with respect
+to an explicitly-stored initial value.
 Note that a single position can be very specific,
 often confined to a single OS process. This allows meaningful
 measurement of process-local values such as allocations
